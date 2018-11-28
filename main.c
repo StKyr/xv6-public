@@ -5,6 +5,7 @@
 #include "mmu.h"
 #include "proc.h"
 #include "x86.h"
+#include "minheap.h"
 
 static void startothers(void);
 static void mpmain(void)  __attribute__((noreturn));
@@ -30,7 +31,8 @@ main(void)
   tvinit();        // trap vectors
   binit();         // buffer cache
   fileinit();      // file table
-  ideinit();       // disk 
+  ideinit();       // disk
+  MinHeap_init();   /**********************************************************/
   startothers();   // start other processors
   kinit2(P2V(4*1024*1024), P2V(PHYSTOP)); // must come after startothers()
   userinit();      // first user process
@@ -44,6 +46,7 @@ mpenter(void)
   switchkvm();
   seginit();
   lapicinit();
+    //cprintf("npmain called in mpenter\n");
   mpmain();
 }
 
@@ -83,7 +86,7 @@ startothers(void)
     // is running in low  memory, so we use entrypgdir for the APs too.
     stack = kalloc();
     *(void**)(code-4) = stack + KSTACKSIZE;
-    *(void(**)(void))(code-8) = mpenter;
+    *(void**)(code-8) = mpenter;
     *(int**)(code-12) = (void *) V2P(entrypgdir);
 
     lapicstartap(c->apicid, V2P(code));
@@ -91,6 +94,7 @@ startothers(void)
     // wait for cpu to finish mpmain()
     while(c->started == 0)
       ;
+
   }
 }
 
